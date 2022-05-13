@@ -1,0 +1,121 @@
+---
+title: "hw5"
+output: html_document
+date: '2022-05-13'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(tidymodels)
+library(janitor)
+library(glmnet)
+set.seed(42)
+```
+
+
+## Q1
+
+```{r}
+data<- read_csv("data/Pokemon.csv")%>%clean_names()
+```
+
+The clean_names() function can returns names with only lowercase letters, with _ as a separator; and handles special characters and spaces.
+
+This is useful because it standardized the variable name, and make columns access by variable name easily.
+
+
+## Q2
+
+```{r}
+ggplot(data=data, aes(x=type_1)) +
+  geom_bar(stat="count") +
+  coord_flip()
+```
+
+There are 18 classes of Type 1. Flying type has very few Pokemon.
+
+
+```{r}
+data <- data %>% filter((type_1 == "Bug" | type_1 == "Fire" |
+                           type_1 == "Grass" | type_1 == "Normal" |
+                           type_1 == "Water" | type_1 == "Psychic"))
+
+data$type_1 <- as.factor(data$type_1)
+data$legendary <- as.factor(data$legendary)
+data$generation <- as.factor(data$generation)
+```
+
+
+## Q3
+
+```{r}
+split = initial_split(data, prob = .8,strata = type_1) 
+
+poke_train = training(split)
+poke_test = testing(split)
+
+folds = vfold_cv(poke_train, v = 5, strata = type_1)
+```
+
+## Q4
+
+```{r}
+poke_recipe = recipe(type_1 ~ legendary + generation + sp_atk + attack + speed + defense + hp + sp_def, data = poke_train) %>%
+  step_dummy(c("legendary", "generation")) %>% 
+  step_normalize(all_predictors())
+```
+
+## Q5
+
+```{r}
+elastic_net = multinom_reg(penalty = tune(), mixture = tune()) %>% 
+  set_engine("glmnet") %>%
+  set_mode("classification")
+
+poke_workflow = workflow() %>% 
+  add_model(elastic_net) %>% 
+  add_recipe(poke_recipe)
+
+```
+
+
+```{r}
+poke_grid = grid_regular(penalty(range=c(-5, 5)), mixture(range=c(0, 1)), levels=10)
+```
+
+Will be fitting 500 models.
+
+## Q6
+
+```{r}
+poke_tune = poke_workflow %>% tune_grid(
+    resamples = folds, 
+    grid = poke_grid)
+```
+
+
+## Q7
+
+```{r}
+
+```
+
+## Q8
+
+```{r}
+
+```
+
+## Q9
+
+```{r}
+
+```
+
+## Q10
+
+```{r}
+
+```
+
