@@ -5,7 +5,7 @@ date: '2022-05-13'
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE,message = FALSE,warning = FALSE)
 library(tidyverse)
 library(tidymodels)
 library(janitor)
@@ -58,6 +58,9 @@ poke_test = testing(split)
 folds = vfold_cv(poke_train, v = 5, strata = type_1)
 ```
 
+We stratify the folds and the training/testing data to make sure that the models we train on and fit to the data are representative of the true distribution. 
+Which can avoid larger difference between performance of training and validation.
+
 ## Q4
 
 ```{r}
@@ -95,27 +98,79 @@ poke_tune = poke_workflow %>% tune_grid(
 ```
 
 
+```{r}
+autoplot(poke_tune)
+```
+
+The lower penalty is, the better result it have.
+
+
 ## Q7
 
-```{r}
 
+```{r}
+poke_best=select_best(poke_tune, metric = "roc_auc")
 ```
+
+```{r}
+poke_model = poke_workflow %>%
+  finalize_workflow(poke_best) %>% 
+  fit(poke_train) %>% 
+  augment(poke_test) 
+
+accuracy(poke_model, truth = type_1, estimate = .pred_class)
+```
+
+
 
 ## Q8
 
 ```{r}
+all_roc_auc=roc_auc(poke_model, truth = type_1, .pred_Bug, .pred_Fire, .pred_Grass, .pred_Normal, .pred_Water, .pred_Psychic)
 
+all_roc_auc
 ```
+
+
+```{r}
+
+roc_curves <- roc_curve(poke_model, truth = type_1, .pred_Bug, .pred_Fire, .pred_Grass, .pred_Normal, .pred_Water, .pred_Psychic)%>%
+  autoplot()
+  
+roc_curves
+```
+
+```{r}
+final_model_conf <-conf_mat(poke_model,truth = type_1, estimate = .pred_class) %>% 
+  autoplot(type = "heatmap")
+final_model_conf
+```
+
+We can say that, the performance of the model is very poor. We can tell that the normal and bug are well predicted. But model is not good at predictiing water , grass, and fire type.
+
+The reason is that we have poor date sample which do not have enough useful features per sample. Therefore, we need more samples.
+
 
 ## Q9
 
 ```{r}
+shot = c(rep(0,time = 464),rep(1,time=337))
 
+n=1000
+
+
+N = length(shot)
+
+result = numeric(n)
+
+for (i in 1:n) { 
+  samp <- sample(shot, replace=TRUE) 
+  result[i] = mean(samp) #calculate and save mean of that sample
+}
+
+hist(result)
+
+quantile(result,probs = c(0.01,0.99))
 ```
 
-## Q10
-
-```{r}
-
-```
 
